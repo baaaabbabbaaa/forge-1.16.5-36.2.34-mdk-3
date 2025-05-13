@@ -8,14 +8,12 @@ import net.minecraftforge.common.capabilities.Capability.IStorage;
 public class CarriedBlockStorage implements IStorage<ICarriedBlock> {
 
     @Override
-    public INBT writeNBT(Capability<ICarriedBlock> capability, ICarriedBlock instance, net.minecraft.util.Direction side) {
-        return instance.getData().serializeNBT();
+    public INBT writeNBT(Capability<ICarriedBlock> cap, ICarriedBlock inst, net.minecraft.util.Direction side) {
+        return inst.getData().serializeNBT();
     }
 
     @Override
-    public void readNBT(Capability<ICarriedBlock> capability, ICarriedBlock instance, net.minecraft.util.Direction side, INBT nbt) {
-        if (nbt instanceof CompoundNBT) {
-            instance.getData().deserializeNBT((CompoundNBT) nbt);
-        }
+    public void readNBT(Capability<ICarriedBlock> cap, ICarriedBlock inst, net.minecraft.util.Direction side, INBT nbt) {
+        if (nbt instanceof CompoundNBT) inst.getData().deserializeNBT((CompoundNBT) nbt);
     }
 }

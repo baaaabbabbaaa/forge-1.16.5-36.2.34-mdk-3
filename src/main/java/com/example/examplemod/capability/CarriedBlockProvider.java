@@ -1,72 +1,45 @@
 package com.example.examplemod.capability;
 
-import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.nbt.CompoundNBT;
 import net.minecraft.nbt.INBT;
-import net.minecraft.util.Direction;
-import net.minecraftforge.common.capabilities.Capability;
-import net.minecraftforge.common.capabilities.CapabilityInject;
-import net.minecraftforge.common.capabilities.ICapabilityProvider;
-import net.minecraftforge.common.capabilities.ICapabilitySerializable;
+import net.minecraftforge.common.capabilities.*;
 import net.minecraftforge.common.util.LazyOptional;
-import net.minecraftforge.common.capabilities.CapabilityManager;
-import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
 
 public class CarriedBlockProvider implements ICapabilitySerializable<CompoundNBT> {
+
     @CapabilityInject(ICarriedBlock.class)
-    public static Capability<ICarriedBlock> CARRIED_BLOCK_CAPABILITY = null;
+    public static Capability<ICarriedBlock> CAP = null;   // Forge が注入
 
-    private final ICarriedBlock instance = new ICarriedBlock() {
+    /*―― ① 保持インスタンス ――*/
+    private final ICarriedBlock impl = new ICarriedBlock() {
         private final CarriedBlockData data = new CarriedBlockData();
-        @Override
-        public CarriedBlockData getData() {
-            return data;
-        }
+        @Override public CarriedBlockData getData() { return data; }
     };
+    private final LazyOptional<ICarriedBlock> lazy = LazyOptional.of(() -> impl);
 
-    private final LazyOptional<ICarriedBlock> optional = LazyOptional.of(() -> instance);
-
-    @Override
-    public <T> LazyOptional<T> getCapability(Capability<T> cap, Direction side) {
-        return cap == CARRIED_BLOCK_CAPABILITY ? optional.cast() : LazyOptional.empty();
+    /*―― ② Capability 取得 ――*/
+    @Override public <T> LazyOptional<T> getCapability(Capability<T> cap, net.minecraft.util.Direction side) {
+        return cap == CAP ? lazy.cast() : LazyOptional.empty();
     }
 
-    @Override
-    public CompoundNBT serializeNBT() {
-        INBT rawNbt = CARRIED_BLOCK_CAPABILITY.getStorage().writeNBT(CARRIED_BLOCK_CAPABILITY, instance, null);
-        if (rawNbt instanceof CompoundNBT) {
-            return (CompoundNBT) rawNbt;
-        } else {
-            return new CompoundNBT();
-        }
+    /*―― ③ NBT Save / Load ――*/
+    @Override public CompoundNBT serializeNBT() {
+        INBT nbt = CAP.getStorage().writeNBT(CAP, impl, null);
+        return nbt instanceof CompoundNBT ? (CompoundNBT) nbt : new CompoundNBT();
+    }
+    @Override public void deserializeNBT(CompoundNBT nbt) {
+        CAP.getStorage().readNBT(CAP, impl, null, nbt);
     }
 
-    @Override
-    public void deserializeNBT(CompoundNBT nbt) {
-        CARRIED_BLOCK_CAPABILITY.getStorage().readNBT(CARRIED_BLOCK_CAPABILITY, instance, null, nbt);
-    }
-
+    /*―― ④ 登録メソッド（ExampleMod.setup 内から呼ぶ） ――*/
     public static void register() {
         CapabilityManager.INSTANCE.register(
                 ICarriedBlock.class,
                 new CarriedBlockStorage(),
-                () -> new ICarriedBlock() {
-                    private final CarriedBlockData data = new CarriedBlockData();
-                    @Override
-                    public CarriedBlockData getData() {
-                        return data;
-                    }
+                () -> new ICarriedBlock() {            // デフォルトインスタンス
+                    private final CarriedBlockData d = new CarriedBlockData();
+                    @Override public CarriedBlockData getData() { return d; }
                 }
         );
-
-        System.out.println("[DEBUG] Capability register 実行");
-        System.out.println("[DEBUG] CARRIED_BLOCK_CAPABILITY = " + CARRIED_BLOCK_CAPABILITY);
-    }
-
-
-    private void setup(final FMLCommonSetupEvent event) {
-        event.enqueueWork(() -> {
-            CarriedBlockProvider.register(); // ← これが "後で実行される" ように！
-        });
     }
 }
